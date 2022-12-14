@@ -1,0 +1,33 @@
+{
+  "settings": {
+    "driver": "taux_diag.py",
+    "long_name": "Equator zonal wind stress diagnostic",
+    "realm": "atmos",
+    "description": "Equator zonal wind stress diagostic",
+    "runtime_requirements": {
+      "python3": [
+        "matplotlib"
+      ]
+    },
+    "pod_env_vars": {
+      "lat_min": "-15",
+      "lat_max": "15",
+      "lon_min": "130",
+      "lon_max": "270"
+    }
+  },
+    "dimensions": {
+    "lat": {"standard_name": "latitude"},
+    "lon": {"standard_name": "longitude"},
+    "time": {"standard_name": "time"}
+  },
+  "varlist": {
+    "TAUX": {
+      "standard_name": "surface_downward_eastward_stress",
+      "units": "Pa",
+      "dimensions": ["time","lat","lon"],
+      "frequency": "day"
+    }
+  }
+}
+
