@@ -99,12 +99,14 @@ obs_cf = obs_taux.plot(robust = True, x = 'lon', y = 'dayofyear', levels = levs,
 #Regine plot labels
 plt.ylabel("day of year")
 plt.xlabel("longitude")
-title_string = "{CASENAME}: Mean {TAUX_var} Annual Cycle".format(**os.environ)
+title_string = "TropFlux: Mean Taux Annual Cycle".format(**os.environ)
 plt.title(title_string)
 
 #Output the figure
-fname        = "{CASENAME}.AnnualCycle_TAUX.eps".format(**os.environ) #"LatAvg_Taux_Time_vs_Lon.eps"
-output_fname = os.path.join(workdir_name, "model", "PS", fname)
+fname        = "TropFlux.AnnualCycle_TAUX_avgeraged_1980-2018.eps".format(**os.environ) 
+output_fname = os.path.join(workdir_name, "obs", "PS", fname)
 plt.savefig(output_fname, format="eps", bbox_inches="tight")
 
-#fig.savefig("LatAvg_Taux_vs_Time.eps", bbox_inches="tight")
+#Close the files
+model_ds.close()
+obs_ds.close()
