@@ -10,13 +10,13 @@
     },
     "pod_env_vars": {
       "first_yr": "1980",
-      "last_yr": "1985"
+      "last_yr": "2014"
     }
   },
   "data" : {
     "realm": "atmos"
-  },
-
+   },
+   
 // Variable Coordinates
   "dimensions": {
     "lat": {
@@ -39,6 +39,12 @@
       "dimensions": ["time", "lat", "lon"],
       "standard_name" : "surface_downward_eastward_stress",
       "units": "Pa"
-    }
+    },
+    "sftlf": {
+     // "frequency": "fx",
+      "dimensions": ["lat", "lon"],
+      "standard_name": "land_area_fraction",
+      "units": "%"
+      }
   }
 }
