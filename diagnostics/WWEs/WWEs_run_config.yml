@@ -12,7 +12,7 @@ case_list:
     model: "CESM2"
     convention: "CMIP"
     startdate: "19800101"
-    enddate: "19891231"
+    enddate: "20150101"
 
 #  "tauu_Eday_CESM2_historical_r1i1p1f1_gn_19900101-19991231" :
 #    model: "CESM2"
