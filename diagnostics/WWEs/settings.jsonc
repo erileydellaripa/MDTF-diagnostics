@@ -10,7 +10,18 @@
     },
     "pod_env_vars": {
       "first_yr": "1980",
-      "last_yr": "2014"
+      "last_yr": "2014",
+      // Lower latitude limit for zonal wind stress lat band avgs (defaults to -2.5)
+      "min_lat": "-2.5",
+      // Upper latitude limit for zonal wind stress lat band avgs (defaults to 2.5)
+      "max_lat": "2.5",
+      // Lower longitude limit for zonal wind stress, lons should be 0-360 (defaults to 120)
+      "min_lon": "120",
+      // Upper longitude limit for zonal wind stresx, lons should be 0-360 (defaults to 280)
+      "max_lon": "280"
+      // Choose how native model grid should be regridded to match TropFlux grid (default is 'conservative_normed')
+      // The other option is biliniar
+      "regrid_method": "conservative_normed"
     }
   },
   "data" : {
