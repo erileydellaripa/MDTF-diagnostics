@@ -4,6 +4,7 @@ import pandas as pd
 from netCDF4 import Dataset
 import glob
 import os
+import xesmf as xe
 import matplotlib.pyplot as plt
 from scipy.ndimage import (
     label,
