@@ -30,10 +30,6 @@ from WWE_diag_tools import (
 ####################################################################################
 #Define some paths and functions
 ####################################################################################
-
-work_dir = os.environ["WORK_DIR"]
-casename = os.environ["CASENAME"]
-
 def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
                                   tauu_time = None, savename = '',
                                   first_year = '', last_year = ''):
@@ -117,18 +113,27 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
     
     return cf
 
+def _preprocess(x, lon_bnds, lat_bnds):
+    return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
+
 print("\n=======================================")
 print("BEGIN WWEs.py ")
 print("=======================================")
 
-def _preprocess(x, lon_bnds, lat_bnds):
-    return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
+work_dir     = os.environ["WORK_DIR"]
+obs_dir      = os.environ["OBS_DATA"]
+casename     = os.environ["CASENAME"]
+first_year   = os.environ["first_yr"]
+last_year    = os.environ["last_yr"]
+min_lat      = float(os.environ["min_lat"])
+max_lat      = float(os.environ["max_lat"])
+min_lon      = float(os.environ["min_lon"])
+max_lon      = float(os.environ["max_lon"])
+regrid_method= os.environ["regrid_method"])
 
-work_dir  = os.environ["WORK_DIR"]
-obs_dir   = os.environ["OBS_DATA"]
-casename  = os.environ["CASENAME"]
-first_year= os.environ["first_yr"]
-last_year = os.environ["last_yr"]
+#Define lats to average tauu over and lon range to analyze
+lat_lim_list = [min_lat, max_lat]
+lon_lim_list = [min_lon, max_lon]
 
 ###########################################################################
 ##############Part 1: Get, Plot Observations ##############################
@@ -174,30 +179,84 @@ with open(case_env_file, 'r') as stream:
 
 cat_def_file = case_info['CATALOG_FILE']
 case_list    = case_info['CASE_LIST']
+
+#Use partial function to only load part of the data file
+lon_bnds, lat_bnds = (0, 360), (-32.5, 32.5)
+partial_func       = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
+
+# open the csv file using information provided by the catalog definition file
+cat = intake.open_esm_datastore(cat_def_file)
+
 # all cases share variable names and dimension coords in this example, so just get first result for each
 tauu_var   = [case['tauu_var'] for case in case_list.values()][0]
 time_coord = [case['time_coord'] for case in case_list.values()][0]
 lat_coord  = [case['lat_coord'] for case in case_list.values()][0]
 lon_coord  = [case['lon_coord'] for case in case_list.values()][0]
 
-# open the csv file using information provided by the catalog definition file
-cat = intake.open_esm_datastore(cat_def_file)
-
-# filter catalog by desired variable and output frequency
+###########################################################
+#Filter catalog by desired variable and output frequency
+###########################################################
+#Get tauu (zonal wind stress) variable
 tauu_subset = cat.search(variable_id=tauu_var, frequency="day")
 
-# examine assets for a specific file
-#tas_subset['CMIP.synthetic.day.r1i1p1f1.day.gr.atmos.r1i1p1f1.1980-01-01-1984-12-31'].df
-
-#Use partial function to only load part of the data file
-lon_bnds, lat_bnds = (0, 360), (-32.5, 32.5)
-partial_func       = partial(_preprocess, lon_bnds=lon_bnds, lat_bnds=lat_bnds)
-
-# convert tas_subset catalog to an xarray dataset dict
+# convert tauu_subset catalog to an xarray dataset dict
 tauu_dict = tauu_subset.to_dataset_dict(preprocess = partial_func,
-    xarray_open_kwargs={"decode_times": True, "use_cftime": True}
-)
+                                        xarray_open_kwargs={"decode_times": True, "use_cftime": True})
 
+for k, v in tauu_dict.items(): 
+    tauu_arr = tauu_dict[k][tauu_var]
+
+#Get sftlf (land fraction) variable if it exists & mask out land 
+key = 'sftlf_var'
+x = list(case_list[casename].keys())
+
+if(x.count(key) == 1):
+    print("Using model land fraction variable")
+    sftlf_var    = [case['sftlf_var'] for case in case_list.values()][0]
+    sftlf_subset = cat.search(variable_id=sftlf_var, frequency="fx")
+    # convert sftlf_subset catalog to an xarray dataset dict
+    sftlf_dict   = sftlf_subset.to_dataset_dict(preprocess = partial_func)
+
+    for k, v in sftlf_dict.items():
+        sftlf_arr = sftlf_dict[k][sftlf_var]
+
+    #mask out land in tauu
+    masked_tauu = tauu_arr.where(sftlf_arr < 10)
+
+if(x.count(key) == 0):
+    print("Need to use etopo.nc file to mask out the land")
+    print('Program will exit for now, as need to build in more code')
+    #ls_mask = land_mask_using_etopo(ds = model_ds, topo_latgrid_1D = topo_latgrid_1D, 
+    #                                    topo_longrid_1D = topo_longrid_1D,
+    #                                    topo_data1D = topo_data1D, lf_cutoff = 10)
+    #masked_tauu = model_ds[tauu_name].where(ls_mask == 1)
+    sys.exit()
+
+if(x.count(key) > 1):
+    print('Error: Multiple land fraction (sftlf) files found. There should only be one!')
+    print('Program will exit')
+    sys.exit()
+
+#Convert masked_tauu dataaray back to dataset    
+tauu_ds = masked_tauu.to_dataset()
+
+#Create a mask variable for the tauu and ws dataset
+tauu_ds["mask"] = xr.where(~np.isnan(tauu_ds[tauu_var].isel(time = 0)), 1, 0)
+
+print('tauu_ds.lat.size:', tauu_ds.lat.size)
+print('regrid method:', regrid_method
+##################################################
+#Regrid tauu to the observations
+##################################################
+if tauu_ds.lat.size > 1:
+    print('tauu_ds.lat.size > 1')
+    regridder_tauu = regridder_model2obs(lon_vals = obs_lons, lat_vals = obs_lats,
+                                        in_data = tauu_ds, type_name = regrid_method_type,
+                                        isperiodic = True)
+    re_model_var   = regridder_tauu(tauu_ds[tauu_var], skipna = True)
+
+re_model_var
+    
 tauu_arrays = {}
 for k, v in tauu_dict.items(): 
     arr = tauu_dict[k][tauu_var]
