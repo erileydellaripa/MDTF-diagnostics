@@ -129,7 +129,7 @@ min_lat      = float(os.environ["min_lat"])
 max_lat      = float(os.environ["max_lat"])
 min_lon      = float(os.environ["min_lon"])
 max_lon      = float(os.environ["max_lon"])
-regrid_method= os.environ["regrid_method"])
+regrid_method= os.environ["regrid_method"]
 
 #Define lats to average tauu over and lon range to analyze
 lat_lim_list = [min_lat, max_lat]
@@ -244,14 +244,14 @@ tauu_ds = masked_tauu.to_dataset()
 tauu_ds["mask"] = xr.where(~np.isnan(tauu_ds[tauu_var].isel(time = 0)), 1, 0)
 
 print('tauu_ds.lat.size:', tauu_ds.lat.size)
-print('regrid method:', regrid_method
+print('regrid method:', regrid_method)
 ##################################################
 #Regrid tauu to the observations
 ##################################################
 if tauu_ds.lat.size > 1:
     print('tauu_ds.lat.size > 1')
     regridder_tauu = regridder_model2obs(lon_vals = obs_lons, lat_vals = obs_lats,
-                                        in_data = tauu_ds, type_name = regrid_method_type,
+                                        in_data = tauu_ds, type_name = regrid_method,
                                         isperiodic = True)
     re_model_var   = regridder_tauu(tauu_ds[tauu_var], skipna = True)
 
