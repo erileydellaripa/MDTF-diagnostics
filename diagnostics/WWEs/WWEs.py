@@ -26,7 +26,6 @@ from WWE_diag_tools import (
     WWE_statistics, #We don't need to do the statistics to make the likelihood by longitude plot
     find_WWE_time_lon)
 
-
 ####################################################################################
 #Define some paths and functions
 ####################################################################################
@@ -116,10 +115,12 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
 def _preprocess(x, lon_bnds, lat_bnds):
     return x.sel(lon=slice(*lon_bnds), lat=slice(*lat_bnds))
 
+
 print("\n=======================================")
 print("BEGIN WWEs.py ")
 print("=======================================")
 
+print("*** Parse MDTF-set environment variables ...")
 work_dir     = os.environ["WORK_DIR"]
 obs_dir      = os.environ["OBS_DATA"]
 casename     = os.environ["CASENAME"]
@@ -136,14 +137,14 @@ lat_lim_list = [min_lat, max_lat]
 lon_lim_list = [min_lon, max_lon]
 
 ###########################################################################
-##############Part 1: Get, Plot Observations ##############################
+##############Part 1: Get & Plot Observations #############################
 ###########################################################################
 print(f'*** Now working on obs data\n------------------------------')
 obs_file_WWEs = obs_dir + '/TropFlux_120-dayHPfiltered_tauu_1980-2014.nc'
 
 print(f'*** Reading obs data from {obs_file_WWEs}')
 obs_WWEs    = xr.open_dataset(obs_file_WWEs)
-print(obs_WWEs, 'obs_WWEs')
+print(obs_WWEs)
 
 # Subset the data for the user defined first and last years #
 obs_WWEs = obs_WWEs.sel(time=slice(first_year, last_year))
@@ -156,18 +157,22 @@ obs_WWE_mask        = obs_WWEs.WWE_mask
 TropFlux_filt_tauu  = obs_WWEs.filtered_tauu
 TropFlux_WWEsperlon = obs_WWEs.WWEs_per_lon
 
+#Plot the yearly Hovmollers for observations
 plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask,
                                   lon_vals = Pac_lons, tauu_time = obs_time,
                                   savename = f"{work_dir}/obs/PS/TropFlux_",
                                   first_year = first_year, last_year = last_year)
 
 ###########################################################################
-###########Parse MDTF-set environment variables############################
+############################### Model #####################################
 ###########################################################################
+print(f'*** Now starting work on {casename}\n------------------------------')
+print('*** Reading variables ...')
+
 #These variables come from the case_env_file that the framework creates
 #the case_env_file points to the csv file, which in turn points to the data files.
 #Variables from the data files are then read in. See example_multicase.py
-print("*** Parse MDTF-set environment variables ...")
+# Read the input model data
 
 case_env_file = os.environ["case_env_file"]
 assert os.path.isfile(case_env_file), f"case environment file not found"
@@ -193,9 +198,9 @@ time_coord = [case['time_coord'] for case in case_list.values()][0]
 lat_coord  = [case['lat_coord'] for case in case_list.values()][0]
 lon_coord  = [case['lon_coord'] for case in case_list.values()][0]
 
-###########################################################
+############################################################################
 #Filter catalog by desired variable and output frequency
-###########################################################
+############################################################################
 #Get tauu (zonal wind stress) variable
 tauu_subset = cat.search(variable_id=tauu_var, frequency="day")
 
@@ -206,12 +211,14 @@ tauu_dict = tauu_subset.to_dataset_dict(preprocess = partial_func,
 for k, v in tauu_dict.items(): 
     tauu_arr = tauu_dict[k][tauu_var]
 
-#Get sftlf (land fraction) variable if it exists & mask out land 
+##################################################################
+#Get sftlf (land fraction) variable if it exists & mask out land
+##################################################################
 key = 'sftlf_var'
 x = list(case_list[casename].keys())
 
 if(x.count(key) == 1):
-    print("Using model land fraction variable")
+    print("Using model land fraction variable to mask out land")
     sftlf_var    = [case['sftlf_var'] for case in case_list.values()][0]
     sftlf_subset = cat.search(variable_id=sftlf_var, frequency="fx")
     # convert sftlf_subset catalog to an xarray dataset dict
@@ -236,27 +243,68 @@ if(x.count(key) > 1):
     print('Error: Multiple land fraction (sftlf) files found. There should only be one!')
     print('Program will exit')
     sys.exit()
-
+    
+##################################################
 #Convert masked_tauu dataaray back to dataset    
 tauu_ds = masked_tauu.to_dataset()
 
-#Create a mask variable for the tauu and ws dataset
+##################################################
+#Only keep data during desired time range
+tauu_ds = tauu_ds.where((tauu_ds.time.dt.year >= int(first_year)) &
+                       (tauu_ds.time.dt.year <= int(last_year)), drop = True)
+
+##################################################
+#Create a mask variable for the tauu dataset
 tauu_ds["mask"] = xr.where(~np.isnan(tauu_ds[tauu_var].isel(time = 0)), 1, 0)
 
-print('tauu_ds.lat.size:', tauu_ds.lat.size)
-print('regrid method:', regrid_method)
 ##################################################
 #Regrid tauu to the observations
 ##################################################
+print('lon size before regridding:', tauu_ds.lon.size)
+print('Start regrid code using the following method:', regrid_method)
+
 if tauu_ds.lat.size > 1:
     print('tauu_ds.lat.size > 1')
-    regridder_tauu = regridder_model2obs(lon_vals = obs_lons, lat_vals = obs_lats,
+    regridder_tauu = regridder_model2obs(lon_vals = np.asarray(obs_lons), lat_vals = np.asarray(obs_lats),
                                         in_data = tauu_ds, type_name = regrid_method,
                                         isperiodic = True)
-    re_model_var   = regridder_tauu(tauu_ds[tauu_var], skipna = True)
+    re_model_tauu  = regridder_tauu(tauu_ds[tauu_var], skipna = True)
 
-re_model_var
+print('lon size after regridding:', re_model_tauu.lon.size)
     
+##################################################
+#Find region of interest
+#At this point, re_model_tauu is a DataArray
+##################################################
+tauu_region = ((re_model_tauu).where(
+    (re_model_tauu.lat >= np.array(lat_lim_list).min()) &
+    (re_model_tauu.lat <= np.array(lat_lim_list).max()) &
+    (re_model_tauu.lon >= np.array(lon_lim_list).min()) &
+    (re_model_tauu.lon <= np.array(lon_lim_list).max()),
+    drop = True))
+
+print('tauu_region:', tauu_region)
+
+##################################################
+#Average over the latitudes
+##################################################
+#The xarray mean function ignores the nans
+tauu_region_latavg = tauu_region.mean(dim = 'lat') 
+    
+###################################################################################
+#Check to see if westerly zonal wind stresses are recorded as positive or negative
+###################################################################################
+mean_lon220p5 = np.array(np.mean(tauu_region_latavg.sel(lon = 220.5)))
+print('mean tauu at 220.5E:', mean_lon220p5)
+factor = -1 if mean_lon220p5 > 0 else 1
+tauu   = tauu_region_latavg * factor
+print('tauu after lat averaging:', tauu)
+
+print('At this point, tauu is a DataArray with time longitude dimensions on the TropFlux grid')
+
+
+#--------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------
 tauu_arrays = {}
 for k, v in tauu_dict.items(): 
     arr = tauu_dict[k][tauu_var]
