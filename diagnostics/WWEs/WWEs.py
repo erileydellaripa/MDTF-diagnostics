@@ -69,7 +69,48 @@ def find_WWEs_and_characteristics(in_data = None, tauu_thresh = 0.04, mintime = 
     return duration, IWW, zonal_extent, tauu_mean, WWE_labels, WWE_mask, center_lons, \
            center_times, min_times, max_times, min_lons, max_lons, \
            lon_array, tauu_time
-           
+
+
+def save_filtered_tauu_WWEchar(WWE_labels = None, WWE_mask = None, tauu_anom_vals = None, duration = None, IWW = None,
+                               zonal_extent = None,tauu_anom_mean = None, tauu_abs_mean = None, 
+                               center_lon_vals = None, center_time_vals = None, min_lon_vals = None, 
+                               max_lon_vals = None, min_time_vals = None, max_time_vals = None,
+                               lon_array = None, tauu_time = None, save_name = '',
+                               filt_descrip = '120-day HP filtered'):
+    
+    uniq_WWE_labels = np.unique(WWE_labels)[1:]
+    #reference_time  = pd.Timestamp('1970-01-01T00:00:00Z')
+
+    data_vars = dict(
+        wwe_labels    =(['time', 'lon'], WWE_labels.squeeze(), dict(units='None', long_name='Unique label for each WWE')),
+        wwe_mask      =(['time', 'lon'], WWE_mask.squeeze(), dict(units='Binary', long_name='1s are where WWEs are located, 0s are locations without WWEs')),
+        tauu_anom     =(['time', 'lon'], tauu_anom_vals.squeeze(), dict(units='Pa', long_name = 'Mean ' + filt_descrip + ' zonal wind stress')),
+        tauu_anom_mean=(['events'], tauu_anom_mean, dict(units='Pa', long_name = 'Mean ' + filt_descrip + ' zonal wind stress per WWE')),
+        tauu_abs_mean =(['events'], tauu_abs_mean, dict(units='Pa', long_name = 'Mean absolute zonal wind stress per WWE')),
+        duration      =(['events'], duration, dict(units='Days', long_name = 'duration of each WWE')),
+        IWW_vals      =(['events'], IWW, dict(units='Pa', long_name='Integrated wind work for each WWE')),
+        zonal_extent  =(['events'], zonal_extent, dict(units='Degrees', long_name = 'Longitudinal extent of each WWE')),
+        center_lons   =(['events'], center_lon_vals, dict(units='Degrees', long_name = 'Mass-weighted center longitude for each WWE')),
+        min_lons      =(['events'], min_lon_vals, dict(units='Degrees', long_name = 'Min longitude for each WWE')),
+        max_lons      =(['events'], max_lon_vals, dict(units='Degrees', long_name = 'Max longitude for each WWE')),
+        min_times     =(['events'], min_time_vals),
+        max_times     =(['events'], max_time_vals),
+        center_times  =(['events'], center_time_vals)
+    )
+
+    ds = xr.Dataset(data_vars = data_vars,
+                    coords=dict(
+                        events= (["events"], uniq_WWE_labels),
+                        lon   = lon_array,
+                        time  = tauu_time,
+                    ),
+                    attrs=dict(description= filt_descrip + " zonal wind stress and WWE characteristics. Generated using MDTF POD WWE diagnostic")
+                   )
+
+    ds.to_netcdf(save_name + '.WWE_characteristics.nc')
+    
+    return ds
+
 def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
                                   tauu_time = None, savename = '',
                                   first_year = '', last_year = ''):
@@ -179,7 +220,8 @@ lat_lim_list = [min_lat, max_lat]
 lon_lim_list = [min_lon, max_lon]
 
 ###########################################################################
-##################### Get & Plot Observations #############################
+########### Part 1 ########################################################
+########### Get TropFlux observations needed for regridding and plotting
 ###########################################################################
 print(f'*** Now working on obs data\n------------------------------')
 obs_file_WWEs = obs_dir + '/TropFlux_120-dayHPfiltered_tauu_1980-2014.nc'
@@ -198,12 +240,6 @@ Pac_lons = obs_WWEs.Pac_lon
 obs_WWE_mask        = obs_WWEs.WWE_mask
 TropFlux_filt_tauu  = obs_WWEs.filtered_tauu
 TropFlux_WWEsperlon = obs_WWEs.WWEs_per_lon
-
-#Plot the yearly Hovmollers for observations
-plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask,
-                                  lon_vals = Pac_lons, tauu_time = obs_time,
-                                  savename = f"{work_dir}/obs/PS/TropFlux_",
-                                  first_year = first_year, last_year = last_year)
 
 ###################################################################################
 ######### PART 2 ##################################################################
@@ -360,7 +396,7 @@ print('data2use', data2use)
 
 ###################################################################################
 ######### PART 3 ##################################################################
-#########Find WWEs and their characteristics and compute statistics################
+######### Find & Save WWEs and their characteristics & statistics #################
 ###################################################################################
 duration, IWW, zonal_extent, tauu_mean, WWE_labels, WWE_mask, center_lons, \
 center_times, min_times, max_times, min_lons, max_lons, lon_array, tauu_time = \
@@ -371,45 +407,57 @@ find_WWEs_and_characteristics(in_data = data2use, tauu_thresh = tauu_thresh2use,
 
 durationB, zonal_extentB, tauu_sum, tauu_abs_mean = WWE_characteristics(wwe_labels = WWE_labels, data = tauu)
 
-print('nWWEs:', duration.size)
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
-tauu_arrays = {}
-for k, v in tauu_dict.items(): 
-    arr = tauu_dict[k][tauu_var]
-    arr = arr.sel(lon = slice(120,280), lat = slice(-2.5, 2.5),
-                      time = slice(first_year, last_year))
-    arr = arr.mean(dim = (tauu_dict[k][lat_coord].name,tauu_dict[k][time_coord].name))
 
-    tauu_arrays[k] = arr
+print('nWWEs:', duration.size)
+print('')
+
+##################################################################################
+# Save the WWE characteristics and statistics to a netcdf file
+##################################################################################
+print('Saving the WWE characteristics to a netcdf file')
+
+save_name = f"{work_dir}/model/netCDF/{casename}.{first_year}-{last_year}"
+
+WWE_chars = save_filtered_tauu_WWEchar(WWE_labels = WWE_labels, WWE_mask = WWE_mask, tauu_anom_vals = np.asarray(data2use), 
+                                       duration = duration, IWW = IWW, zonal_extent = zonal_extent, 
+                                       tauu_anom_mean = tauu_mean, tauu_abs_mean = tauu_abs_mean, 
+                                       center_lon_vals = center_lons, center_time_vals = np.asarray(center_times), 
+                                       min_lon_vals = min_lons, max_lon_vals = max_lons, 
+                                       min_time_vals = np.asarray(min_times), max_time_vals = np.asarray(max_times), 
+                                       lon_array = lon_array, tauu_time = np.asarray(tauu_time), save_name = save_name)
+
+###################################################################################
+######### PART 4 ##################################################################
+######### Plot Hovmollers and histograms for observations and model ###############
+###################################################################################
+
+
+#Plot the yearly Hovmollers for observations
+plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask,
+                                  lon_vals = Pac_lons, tauu_time = obs_time,
+                                  savename = f"{work_dir}/obs/PS/TropFlux_",
+                                  first_year = first_year, last_year = last_year)
 
 ###########################################################################
-# Part 3: Make a plot that contains results from each case
-# --------------------------------------------------------
+# Plot Homollers for Model
+###########################################################################
+plot_model_Hovmollers_by_year(data = data2use, wwe_mask = WWE_mask,
+                                  lon_vals = lon_array, tauu_time = tauu_time,
+                                  savename = f"{work_dir}/model/PS/{casename}",
+                                  first_year = first_year, last_year = last_year)
 
-# set up the figure
-fig = plt.figure(figsize=(12, 4))
-ax = plt.subplot(1, 1, 1)
-
-# loop over cases
-for k, v in tauu_arrays.items():
-    v.plot(ax=ax, label=k)
-
-# add legend
-plt.legend()
-
-# add title
-plt.title("Mean Zonal Wind Stress")
-
-assert os.path.isdir(f"{work_dir}/model/PS"), f'Assertion error: {work_dir}/model/PS not found'
-plt.savefig(f"{work_dir}/model/PS/{casename}.Mean_TAUU.eps", bbox_inches="tight")
-
-# Part 4: Close the catalog files and
-# release variable dict reference for garbage collection
-# ------------------------------------------------------
+###################################################################################
+######### PART 5 ##################################################################
+#Close the catalog files and release variable dict reference for garbage collection
+###################################################################################
 cat.close()
 tauu_dict = None
-# Part 5: Confirm POD executed successfully
+
+
+###################################################################################
+######### PART 6 ##################################################################
+######### Confirm POD executed successfully #######################################
+###################################################################################
 # ----------------------------------------
 print("Last log message by example_multicase POD: finished successfully!")
 sys.exit(0)
