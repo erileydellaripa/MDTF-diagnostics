@@ -97,38 +97,6 @@ def nharm(x, N):
             
     return filtered
 
-def calc_raw_and_smth_annual_cycle(raw_data = None, factor = 1, varname = 'tauu', in_units = 'Nm-2'):
-
-    ds_rawAC = raw_data.groupby('time.dayofyear').mean(dim = ('time'), skipna = True)
-    var_rawAC= ds_rawAC[varname]*factor
-    
-    var_climo_each_lon = var_rawAC.mean(dim = 'dayofyear')
-    var_climo_each_lon = var_climo_each_lon.values
-
-    #Info for removing harmonics
-    N       = len(var_rawAC)
-    tmpvals = var_rawAC.values
-    filt    = np.zeros_like(tmpvals)
-    
-    #Find the frist 3 harmonics for each longitude
-    for i in range(len(var_rawAC.lon)): filt[:, i] = nharm(tmpvals[:, i], N)
-
-    var_smthAC = np.zeros_like(filt)
-    for iday in range(len(var_rawAC.dayofyear)): var_smthAC[iday] = filt[iday] + var_climo_each_lon
-        
-    data_vars = dict(
-        rawAC = (['dayofyear', 'lon'], var_rawAC, dict(units=in_units, lon_name = 'raw annual cycle for ' + varname)),
-        smthAC= (['dayofyear', 'lon'], var_smthAC,dict(units=in_units, lon_name = 'smoothed (removed 1st 3 harmonics) annual cycle for ' + varname)))
-    
-    ds2save = xr.Dataset(data_vars=data_vars,
-                         coords=dict(lon  = (['lon'], var_rawAC.lon),
-                                   dayofyear = var_rawAC.dayofyear,),
-                         attrs=dict(description='Raw and smoothed (removed 1st 3 harmonics) annual cycle for ' + varname, units = in_units,)
-                        )     
-
-    return ds2save
-
-
 """""
 Explanation of bb_sizes used below:
 followed - https://stackoverflow.com/questions/36200763/objects-sizes-along-dimension
@@ -331,31 +299,6 @@ def WWE_characteristics(wwe_labels = None, data = None):
     
     return duration, zonal_extent, wwe_sum, wwe_mean
 
-def WWE_statistics(var2bin = None, cond_var1 = None, cond_var2 = None, 
-                   min_bin = 5, max_bin = 27, bin_space = 2):
-    
-    bin_values = np.arange(min_bin, max_bin, bin_space)
-    
-    out_count, bin_edges, binnumber = stats.binned_statistic(var2bin, var2bin,
-                                                                 'count', bins= bin_values)
-
-    out_mean_cond1, bin_edges, binnumber = stats.binned_statistic(var2bin, cond_var1, 
-                                                             'mean', bins= bin_values)
-    
-    out_mean_cond2, bin_edges, binnumber = stats.binned_statistic(var2bin, cond_var2, 
-                                                             'mean', bins= bin_values)
-
-    out_std_cond1, bin_edges, binnumber = stats.binned_statistic(var2bin, cond_var1, 
-                                                             'std', bins= bin_values)
-    
-    out_std_cond2, bin_edges, binnumber = stats.binned_statistic(var2bin, cond_var2, 
-                                                             'std', bins= bin_values)
-
-
-    out_freq = out_count/out_count.sum()*100.
-        
-    return out_count, out_freq, out_mean_cond1, out_mean_cond2, out_std_cond1, out_std_cond2, bin_edges, binnumber
-
 def find_WWE_time_lon(data = None, wwe_labels = None, lon = None, time_array = None):
 
     bb_slices = find_objects(wwe_labels)
@@ -466,7 +409,7 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
     cbar_ax.tick_params(labelsize=12)
     cb = plt.colorbar(cf, cax=cbar_ax)
     cb.set_label(label = '$\u03C4_x$ (N $m^{-2}$)', fontsize = 12)
-
+    
     endof20yrs = str(int(first_year) + 19)
     plt.savefig(savename + first_year + '-' + endof20yrs + '.YearlyHovmollers.png', bbox_inches='tight')
     
