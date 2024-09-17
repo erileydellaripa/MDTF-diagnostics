@@ -21,7 +21,11 @@
       "max_lon": "280",
       // Choose how native model grid should be regridded to match TropFlux grid (default is 'conservative_normed')
       // The other option is biliniar
-      "regrid_method": "conservative_normed"
+      "regrid_method": "conservative_normed",
+      //How the zonal wind stress threshold to ID WWEs is determine.
+      //Default True uses the same 2sigma threshold as the obs.
+      //If False, the model's 2sigma tauu is the threshold
+      "do_static_threshold": "True"
     }
   },
   "data" : {
