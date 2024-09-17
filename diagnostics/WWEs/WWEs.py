@@ -24,7 +24,8 @@ from WWE_diag_tools import (
     isolate_WWEs,
     WWE_characteristics,
     find_WWE_time_lon,
-    plot_model_Hovmollers_by_year)
+    plot_model_Hovmollers_by_year,
+    events_per_lon)
 
 ####################################################################################
 #Define some paths and functions
@@ -347,8 +348,6 @@ WWE_chars = save_filtered_tauu_WWEchar(WWE_labels = WWE_labels, WWE_mask = WWE_m
 ######### PART 4 ##################################################################
 ######### Plot Hovmollers and histograms for observations and model ###############
 ###################################################################################
-
-
 #Plot the yearly Hovmollers for observations
 plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask,
                                   lon_vals = Pac_lons, tauu_time = obs_time,
@@ -363,6 +362,33 @@ plot_model_Hovmollers_by_year(data = data2use, wwe_mask = WWE_mask,
                                   savename = f"{work_dir}/model/PS/{casename}",
                                   first_year = first_year, last_year = last_year)
 
+
+###########################################################################
+# Plot the likelihood of a WWE affecting a given 1degree longitude
+###########################################################################
+#Convert WWE_lavels from a numpy array to a DataArray
+WWE_labels_da = xr.DataArray(data=WWE_labels, dims = ['time', 'lon'], 
+                                 coords=dict(
+                                     lon=(['lon'], lon_array),
+                                     time=tauu_time,),
+                                 attrs=dict(description="WWE labels", units = 'N/A',)
+                                )
+
+
+#Call function events_per_lon in WWE_diag_tools.py, which calculates the
+#number of unique WWEs affecting a given 1degree longitude bin (i.e., count_all_event_lons)
+count_all_event_lons, nall_events = events_per_lon(in_da = WWE_labels_da)
+
+#Convert count_all_even_lons into a probability per day
+obs_prop_per_day   = TropFlux_WWEsperlon/obs_time.size*100.
+model_prop_per_day = count_all_event_lons/tauu_time.size*100.
+
+# ***** Make the plot ******
+model_titlename = f"{work_dir}/model/PS/{casename}"
+
+plot_WWE_likelihood_per_lon(lons = Pac_lons, model_prop_per_day = model_prop_per_day,
+                            obs_prop_per_day = obs_prop_per_day, model_name = casename,
+                           first_year = first_year, last_year = last_year)
 ###################################################################################
 ######### PART 5 ##################################################################
 #Close the catalog files and release variable dict reference for garbage collection
