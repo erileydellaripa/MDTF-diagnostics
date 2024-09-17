@@ -20,7 +20,7 @@ from WWE_diag_tools import (
     land_mask_using_etopo,
     regridder_model2obs,
     nharm,
-    calc_raw_and_smth_annual_cycle,
+    filter_data,
     isolate_WWEs,
     WWE_characteristics,
     WWE_statistics, #We don't need to do the statistics to make the likelihood by longitude plot
@@ -29,6 +29,47 @@ from WWE_diag_tools import (
 ####################################################################################
 #Define some paths and functions
 ####################################################################################
+def find_WWEs_and_characteristics(in_data = None, tauu_thresh = 0.04, mintime = 5, minlons = 10,
+                                 xminmax = (3, 3), yminmax = (3, 3), minmax_dur_bins = (5, 27),
+                                 dur_bin_space = 2, minmax_IWW_bins = (1, 42), IWW_bin_space = 4,
+                                 xtend_past_lon = 140):
+    '''
+    This function call the following functions within WWE_diag_tools.py
+    - isolate_WWEs
+        - find_nearby_wwes_merge
+        - renumber_wwes
+    - WWE_chracteristics
+    - find_WWE_time_lon
+    '''
+    
+    start_time = time.time()
+    
+    # 1) Find WWEs
+    #The isolate_WWEs function uses the find_nearby_wwes_merge, renumber_wwes functions 
+    WWE_labels, WWE_mask = isolate_WWEs(data = in_data, tauu_thresh = tauu_thresh, mintime = mintime, 
+                                        minlons = minlons, xmin = xminmax[0], xmax = xminmax[1], 
+                                        ymin = yminmax[0], ymax = yminmax[1], xtend_past_lon = xtend_past_lon)
+
+    # 2) Find characteristics (i.e., duration, zonal extent, integrated wind work sum and mean) of each WWE
+    #Uses WWE_characteristics function
+    duration, zonal_extent, IWW, tauu_mean = WWE_characteristics(wwe_labels = WWE_labels, data = in_data)
+    
+    # 3) Find central, min, and max time and longitude of each WWE
+    #Uses find_WWE_time_lon function
+    tauu_time   = in_data["time"]
+    tauu_lon    = in_data["lon"]
+    lon_array   = np.asarray(tauu_lon)
+       
+    center_lons, center_times, min_times, max_times, min_lons, max_lons \
+    = find_WWE_time_lon(data = in_data, wwe_labels = WWE_labels, 
+                         lon = lon_array, time_array = tauu_time)
+
+    print("--- %s seconds to ID WWEs and compute characteristics---" % (time.time() - start_time))
+    
+    return duration, IWW, zonal_extent, tauu_mean, WWE_labels, WWE_mask, center_lons, \
+           center_times, min_times, max_times, min_lons, max_lons, \
+           lon_array, tauu_time
+           
 def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
                                   tauu_time = None, savename = '',
                                   first_year = '', last_year = ''):
@@ -126,6 +167,7 @@ obs_dir      = os.environ["OBS_DATA"]
 casename     = os.environ["CASENAME"]
 first_year   = os.environ["first_yr"]
 last_year    = os.environ["last_yr"]
+static_thresh= os.environ['do_static_threshold']
 min_lat      = float(os.environ["min_lat"])
 max_lat      = float(os.environ["max_lat"])
 min_lon      = float(os.environ["min_lon"])
@@ -137,7 +179,7 @@ lat_lim_list = [min_lat, max_lat]
 lon_lim_list = [min_lon, max_lon]
 
 ###########################################################################
-##############Part 1: Get & Plot Observations #############################
+##################### Get & Plot Observations #############################
 ###########################################################################
 print(f'*** Now working on obs data\n------------------------------')
 obs_file_WWEs = obs_dir + '/TropFlux_120-dayHPfiltered_tauu_1980-2014.nc'
@@ -163,9 +205,10 @@ plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask
                                   savename = f"{work_dir}/obs/PS/TropFlux_",
                                   first_year = first_year, last_year = last_year)
 
-###########################################################################
-############################### Model #####################################
-###########################################################################
+###################################################################################
+######### PART 2 ##################################################################
+######### Prepare Model output for WWE ID code#####################################
+###################################################################################
 print(f'*** Now starting work on {casename}\n------------------------------')
 print('*** Reading variables ...')
 
@@ -258,7 +301,7 @@ tauu_ds = tauu_ds.where((tauu_ds.time.dt.year >= int(first_year)) &
 tauu_ds["mask"] = xr.where(~np.isnan(tauu_ds[tauu_var].isel(time = 0)), 1, 0)
 
 ##################################################
-#Regrid tauu to the observations
+#Regrid tauu to the TropFlux obs grid
 ##################################################
 print('lon size before regridding:', tauu_ds.lon.size)
 print('Start regrid code using the following method:', regrid_method)
@@ -299,10 +342,36 @@ print('mean tauu at 220.5E:', mean_lon220p5)
 factor = -1 if mean_lon220p5 > 0 else 1
 tauu   = tauu_region_latavg * factor
 print('tauu after lat averaging:', tauu)
-
 print('At this point, tauu is a DataArray with time longitude dimensions on the TropFlux grid')
 
+###################################################################################
+#Filter tauu to use as input to find WWEs and their chracteristics
+###################################################################################
+#filt_dataLP = filter_data(data = tauu, nweights = 201, a = 5)
+#For now the only option is to apply a 120-day highpass filter
+filt_dataHP = filter_data(data = tauu, nweights = 201, a = 120) 
 
+data2use        = tauu - filt_dataHP
+obs_tauu_thresh = 0.04 #Nm-2 Two standard deviations of the TropFlux lat-averaged 120E-280E zonal wind stress.
+tauu_thresh2use = obs_tauu_thresh if static_thresh is True else np.round(data2use.std()*2, decimals = 2)
+
+print('tauu_thresh2use:', tauu_thresh2use)
+print('data2use', data2use)
+
+###################################################################################
+######### PART 3 ##################################################################
+#########Find WWEs and their characteristics and compute statistics################
+###################################################################################
+duration, IWW, zonal_extent, tauu_mean, WWE_labels, WWE_mask, center_lons, \
+center_times, min_times, max_times, min_lons, max_lons, lon_array, tauu_time = \
+find_WWEs_and_characteristics(in_data = data2use, tauu_thresh = tauu_thresh2use, mintime = 5, minlons = 10,
+                              xminmax = (3, 3), yminmax = (3, 3), minmax_dur_bins = (5, 27),
+                              dur_bin_space = 2, minmax_IWW_bins = (1, 42), IWW_bin_space = 4,
+                              xtend_past_lon = 140)
+
+durationB, zonal_extentB, tauu_sum, tauu_abs_mean = WWE_characteristics(wwe_labels = WWE_labels, data = tauu)
+
+print('nWWEs:', duration.size)
 #--------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------
 tauu_arrays = {}
