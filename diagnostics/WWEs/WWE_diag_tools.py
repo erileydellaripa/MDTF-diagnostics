@@ -363,6 +363,27 @@ def find_WWE_time_lon(data = None, wwe_labels = None, lon = None, time_array = N
     
     return center_lon_vals, center_time_vals, min_times, max_times, min_lons, max_lons
 
+
+def events_per_lon(in_da = None):
+    
+    nevents    = np.unique(in_da)[1:].size #Don't count zero
+    event_nums = np.unique(in_da)[1:]
+    
+    event_lon_mask = np.zeros(nevents*in_da.lon.size).reshape(nevents, in_da.lon.size)
+    var_shape_list = in_da.shape
+
+    for ievent in range(nevents):
+        lon_axis  = var_shape_list.index(in_da.lon.shape[0])
+        temp_lons = np.zeros(in_da.lon.size)    
+        w         = np.where(in_da == event_nums[ievent])
+        uniq_wlons= np.unique(w[lon_axis])
+        temp_lons[uniq_wlons] = 1
+        event_lon_mask[ievent] = temp_lons
+        
+    count_event_lons = np.sum(event_lon_mask, axis = 0)
+    
+    return count_event_lons, nevents
+
 #####################################################################
 ###PLOTTING CODE
 #####################################################################
@@ -447,4 +468,38 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
         start2ndpage = str(int(first_year) + 20)
         plt.savefig(savename + start2ndpage + '-' + last_year + '.YearlyHovmollers.png', bbox_inches='tight')
     
+    return cf
+
+def plot_WWE_likelihood_per_lon(lons = None, model_prop_per_day = None,
+                                obs_prop_per_day = None, model_name = '',
+                                first_year = '', last_year = ''):
+    
+    fig, ax = plt.subplots(figsize=(6, 4))
+    cf = ax.plot(lons, model_prop_per_day)
+    cf = ax.fill_between(lons, model_prop_per_day*0, model_prop_per_day, alpha=0.9, label = model_name)
+    cf2 = ax.plot(lons, obs_prop_per_day, color = 'gray')
+    cf2 = ax.fill_between(lons, obs_prop_per_day*0, obs_prop_per_day, color = 'gray', alpha = 0.7, label = 'TropFlux observations')
+    
+    ax.legend(fontsize = 12)
+    
+    ax.set_title(model_titlename, fontsize = 14)
+    ax.set_xlabel('longitude', fontsize = 14)
+    ax.set_ylabel('Probability per day (%)', fontsize = 14)
+    ax.tick_params(axis='y', labelsize=14)
+    ax.tick_params(axis='x', labelsize=14)
+    ax.set_ylim(0, 1.8)
+    ax.grid(alpha = 0.5)
+
+    #Add second axis
+    ax2 = ax.twinx()
+    ytick_vals = ax.get_yticks()
+    ytick_vals[-1] = 1.8
+    label = np.around(100/ytick_vals, decimals = 1)
+    label = ['inf', '200.0', '100.0', '66.7', '']
+    ax2.set_yticks(ytick_vals)
+    ax2.set_yticklabels(label, fontsize = 14)
+    ax2.set_xlabel('Longitude', fontsize = 14)
+    ax2.set_ylabel('Rate of return (days)', fontsize = 14)
+    plt.savefig(f"{model_name}_and_TropFlux_WWE_prob_per_day_{first_year}-{last_year}.png", bbox_inches='tight')
+
     return cf
