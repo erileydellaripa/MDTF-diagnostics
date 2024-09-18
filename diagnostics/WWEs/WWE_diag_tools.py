@@ -473,16 +473,21 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
 def plot_WWE_likelihood_per_lon(lons = None, model_prop_per_day = None,
                                 obs_prop_per_day = None, model_name = '',
                                 first_year = '', last_year = ''):
-    
+
+    #Set the plot
     fig, ax = plt.subplots(figsize=(6, 4))
+
+    #Model simulation
     cf = ax.plot(lons, model_prop_per_day)
     cf = ax.fill_between(lons, model_prop_per_day*0, model_prop_per_day, alpha=0.9, label = model_name)
+
+    #Observations
     cf2 = ax.plot(lons, obs_prop_per_day, color = 'gray')
     cf2 = ax.fill_between(lons, obs_prop_per_day*0, obs_prop_per_day, color = 'gray', alpha = 0.7, label = 'TropFlux observations')
-    
+
+    #Format information
     ax.legend(fontsize = 12)
-    
-    ax.set_title(model_titlename, fontsize = 14)
+    ax.set_title(model_name, fontsize = 14)
     ax.set_xlabel('longitude', fontsize = 14)
     ax.set_ylabel('Probability per day (%)', fontsize = 14)
     ax.tick_params(axis='y', labelsize=14)
