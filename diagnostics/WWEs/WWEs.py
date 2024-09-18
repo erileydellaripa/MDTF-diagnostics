@@ -25,7 +25,8 @@ from WWE_diag_tools import (
     WWE_characteristics,
     find_WWE_time_lon,
     plot_model_Hovmollers_by_year,
-    events_per_lon)
+    events_per_lon,
+    plot_WWE_likelihood_per_lon)
 
 ####################################################################################
 #Define some paths and functions
@@ -387,7 +388,7 @@ model_prop_per_day = count_all_event_lons/tauu_time.size*100.
 model_titlename = f"{work_dir}/model/PS/{casename}"
 
 plot_WWE_likelihood_per_lon(lons = Pac_lons, model_prop_per_day = model_prop_per_day,
-                            obs_prop_per_day = obs_prop_per_day, model_name = casename,
+                            obs_prop_per_day = obs_prop_per_day, model_name = model_titlename,
                            first_year = first_year, last_year = last_year)
 ###################################################################################
 ######### PART 5 ##################################################################
