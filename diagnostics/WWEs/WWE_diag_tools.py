@@ -432,7 +432,7 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
     cb.set_label(label = '$\u03C4_x$ (N $m^{-2}$)', fontsize = 12)
     
     endof20yrs = str(int(first_year) + 19)
-    plt.savefig(savename + first_year + '-' + endof20yrs + '.YearlyHovmollers.png', bbox_inches='tight')
+    plt.savefig(savename +  '.' + first_year + '-' + endof20yrs + '.YearlyHovmollers.png', bbox_inches='tight')
     
     if year_array.size > 20:
         fig, ax = plt.subplots(ncols=5, nrows=4, figsize = (15, 16), sharex = True, sharey = True) 
@@ -466,7 +466,7 @@ def plot_model_Hovmollers_by_year(data = None, wwe_mask = None, lon_vals = None,
         cb.set_label(label = '$\u03C4_x$ (N $m^{-2}$)', fontsize = 12)
         
         start2ndpage = str(int(first_year) + 20)
-        plt.savefig(savename + start2ndpage + '-' + last_year + '.YearlyHovmollers.png', bbox_inches='tight')
+        plt.savefig(savename + '.' + start2ndpage + '-' + last_year + '.YearlyHovmollers.png', bbox_inches='tight')
     
     return cf
 
@@ -505,6 +505,6 @@ def plot_WWE_likelihood_per_lon(lons = None, model_prop_per_day = None,
     ax2.set_yticklabels(label, fontsize = 14)
     ax2.set_xlabel('Longitude', fontsize = 14)
     ax2.set_ylabel('Rate of return (days)', fontsize = 14)
-    plt.savefig(f"{model_name}_and_TropFlux_WWE_prob_per_day_{first_year}-{last_year}.png", bbox_inches='tight')
+    plt.savefig(model_name + f"_and_TropFlux_WWE_prob_per_day_{first_year}-{last_year}.png", bbox_inches='tight')
 
     return cf
