@@ -125,6 +125,8 @@ print("*** Parse MDTF-set environment variables ...")
 work_dir     = os.environ["WORK_DIR"]
 obs_dir      = os.environ["OBS_DATA"]
 casename     = os.environ["CASENAME"]
+start_date   = os.environ["startdate"]
+end_date     = os.environ["enddate"]
 first_year   = os.environ["first_yr"]
 last_year    = os.environ["last_yr"]
 static_thresh= os.environ['do_static_threshold']
@@ -352,8 +354,8 @@ WWE_chars = save_filtered_tauu_WWEchar(WWE_labels = WWE_labels, WWE_mask = WWE_m
 #Plot the yearly Hovmollers for observations
 plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask,
                                   lon_vals = Pac_lons, tauu_time = obs_time,
-                                  savename = f"{work_dir}/obs/PS/TropFlux_",
-                                  first_year = first_year, last_year = last_year)
+                                  savename = f"{work_dir}/obs/PS/TropFlux",
+                                  start_date = '1980-1999', end_date = '2000-2014')
 
 ###########################################################################
 # Plot Homollers for Model
@@ -361,7 +363,7 @@ plot_model_Hovmollers_by_year(data = TropFlux_filt_tauu, wwe_mask = obs_WWE_mask
 plot_model_Hovmollers_by_year(data = data2use, wwe_mask = WWE_mask,
                                   lon_vals = lon_array, tauu_time = tauu_time,
                                   savename = f"{work_dir}/model/PS/{casename}",
-                                  first_year = first_year, last_year = last_year)
+                                  start_date = start_date, end_date = end_date)
 
 
 ###########################################################################
@@ -380,23 +382,40 @@ WWE_labels_da = xr.DataArray(data=WWE_labels, dims = ['time', 'lon'],
 #number of unique WWEs affecting a given 1degree longitude bin (i.e., count_all_event_lons)
 count_all_event_lons, nall_events = events_per_lon(in_da = WWE_labels_da)
 
+
 #Convert count_all_even_lons into a probability per day
 obs_prop_per_day   = TropFlux_WWEsperlon/obs_time.size*100.
 model_prop_per_day = count_all_event_lons/tauu_time.size*100.
 
+#Save the count and probability of a unique WWE per 1degree longitude bin 
+data_vars = dict(
+    model_WWEs_per_lon      =(['lon'], count_all_event_lons, dict(units='count', long_name='Number of unique WWEs affecting a 1degree lon bin from the model')),
+    model_freq_WWEs_per_lon =(['lon'], model_prop_per_day,  dict(units='fractuion', long_name='The fraction of unique WWEs affecting a 1degree lon bin from the model calculated as count/ndays ')),
+    obs_WWEs_per_lon        =(['lon'], np.asarray(TropFlux_WWEsperlon), dict(units='count', long_name='Number of unique WWEs affecting a 1degree lon bin in TropFlux observations from 1980-2014')),
+    obs_freq_WWEs_per_lon   =(['lon'], np.asarray(obs_prop_per_day),  dict(units='fractuion', long_name='The fraction of unique WWEs affecting a 1degree lon bin from TropFlux calculated as count/ndays '))
+)
+ 
+ds = xr.Dataset(data_vars = data_vars,
+                coords=dict(lon = lon_array,),
+                    attrs=dict(description= "Variables needed to make the *model*_and_TropFlux_WWE_prob_per_day.png figures that the WWEs POD produces")
+                   )
+
+ds.to_netcdf(f"{work_dir}/model/netCDF/{casename}_and_TropFlux_WWE_probability_per_day.nc")
+
+
 # ***** Make the plot ******
-model_titlename = f"{work_dir}/model/PS/{casename}"
+save_path = f"{work_dir}/model/PS/"
+model_titlename = {casename}
 
 plot_WWE_likelihood_per_lon(lons = Pac_lons, model_prop_per_day = model_prop_per_day,
-                            obs_prop_per_day = obs_prop_per_day, model_name = model_titlename,
-                           first_year = first_year, last_year = last_year)
+                            obs_prop_per_day = obs_prop_per_day, savepath = save_path,
+                            model_name = casename)
 ###################################################################################
 ######### PART 5 ##################################################################
 #Close the catalog files and release variable dict reference for garbage collection
 ###################################################################################
 cat.close()
 tauu_dict = None
-
 
 ###################################################################################
 ######### PART 6 ##################################################################
