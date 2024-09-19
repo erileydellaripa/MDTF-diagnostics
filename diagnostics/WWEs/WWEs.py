@@ -3,9 +3,7 @@ matplotlib.use("Agg")  # non-X windows backend
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import xarray as xr
-import glob
 import os
 import time 
 import xesmf as xe
