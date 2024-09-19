@@ -1,14 +1,47 @@
 <!-- This file is part of the taux_diag module of the MDTF code package (see LICENSE.txt) -->
 
-<title>Mean zonal wind stress</title>
+<title>Westerly wind events</title>
 <img src="../mdtf_diag_banner.png">
-<h3>Mean zonal wind stress</h3>
+<h3>Westerly wind events s</h3>
 <p>
-The zonal wind stress diagnostic module computes the annual cycle of
-zonal wind stress near the equator using multiple years of daily zonal
-wind stress output from climate models. The result is plotted as a
-latitudinally averaged longitude vs. time figure (i.e., Hovmoller). 
-</p>
+Westerly wind events (WWEs) are anomalously strong, long lasting westerlies
+that predominantly occur over the west Pacific Ocean. They are capable
+of exciting oceanic Kelvin waves, which in turn warm the ocean surface
+and deepen the thermocline as the wave propagates eastward. These
+WWE-Kelvin wave interactions can therefore play an important role in
+ENSO variability and it is important to understand the fidelity of
+WWEs and Kelvin waves in earth system models relative to observations.
+<p>
+This POD identifies WWEs and their characterisitics across the Pacific
+Ocean (120E-280E) using daily equatorially averaged (2.5S - 2.5N)
+120-day highpass filtered zonal wind stress from TropFlux observation
+and earth system models (ESMs). The WWE characteristics include
+central longitude and date, zonal extent, duration, and integrated
+wind work (IWW), which is the sum of all zonal wind stress within the
+WWE time-longitude patch. The IWW indicates the WWE's total forcing to
+the ocean. The methods for WWE identification are fully discussed in
+Riley Dellaripa et al. (2024).
+<p>
+The results of the WWE identification are plotted below in
+time-longitude space (i.e., Hovmollers). The shading is the anomalous
+zonal wind stress and the black outlines indicate the WWEs. Each
+Hovmoller represents one year in the obserations or ESM.
+<p>
+Also plotted is a 1D histogram of the likelihood of each 1 longitude
+bin across the Pacific experiencing a WWE per day. The likelihood is
+calculated as the total number of unique events at each 1 longitude
+divided by the total number of days in each data set. The reciprocal
+of the frequncy indicates the average return rate of a WWE per
+longitude or the average number of days between WWEs at each
+longitude.  
+<p>
+A complementary POD assesses the fidelity of oceanic
+Kelvin waves in ESMs. 
+<p>
+REFERENCE: <br>
+Riley Dellaripa, E. M., C. A. DeMott, J. Cui, and E. D. Maloney, 2024:
+Evaluation of Equatorial Westerly Wind Events in the Pacific Ocean in
+CMIP6 Models. J. Climate, https://doi.org/10.1175/JCLI-D-23-0629.1
 <p>
 </p>
 <TABLE>
