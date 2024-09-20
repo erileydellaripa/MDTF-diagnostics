@@ -5,10 +5,10 @@ Westerly Wind Event Diagnostic Documentation
 Last update: 2024-09-19
 
 This POD identifies westerly wind events (WWEs) in the equatorial Pacific
-(120E-280E) using daily equatrially-averaged (2.5S-2.5N) 120-day highpass filtered zonal wind
-stress. WWEs in TropFlux observations are compared
-to WWEs produced by earth system models. Two sets of figures are
-created:
+(120E-280E) using daily equatrially-averaged (2.5S-2.5N) 120-day
+highpass filtered zonal wind stress. WWEs in TropFlux observations are
+compared to WWEs produced by earth system models. Two sets of figures
+are created:
 
 1. Hovmollers of 120-day highpass filtered zonal wind stress for each
    year of the data considered. Each year is a separate panel with the
@@ -25,7 +25,8 @@ of the frequncy indicates the average return rate of a WWE per
 longitude or the average number of days between WWEs at each
 longitude.
 
-The variables needed to created these figures are saved in
+The variables needed to created these figures are saved in the
+follwing directories:
 {work_dir}/WWEs/model/netCDF/ and /inputdata/obs_data/WWEs/ 
 
 Version & Contact info
@@ -115,6 +116,25 @@ References
 
 More about this diagnostic
 --------------------------
+Westerly wind events (WWEs) are anomalously strong, long lasting
+westerlies that occur primarily over the Pacific Ocean. The momentum
+imparted on the ocean from WWEs have the potential to excite eastward
+propagating oceanic Kelvin wave. The oceanic Kelvin waves, in turn,
+warm the ocean surface and depress the thermocline as they propagate
+eastward, which can have impacts on ENSO development. Because of WWEs
+relationship to oceanic Kelvin waves and ENSO development, it is
+important to determine how well earth system models (ESMs) replicate
+them. The inability for a model to accurately replicate WWE frequency,
+location, and strength has potential consequences for ENSO
+development. WWEs are frequently associated with Madden Julian
+Oscillaiton (MJO) events or equatorial convectively coupled Rosby
+waves (CRWs), though MJO and CRWs are not the only source of WWEs. The
+inability of a model to appropriately represent WWE forcing can be
+linked to deficiencies in a models representation of MJO and CRW
+variability, though there are some models that accurately capture MJO
+and CRW variability while still misprepresenting WWE forcing in the
+west Pacific. For more details on this work please see Riley Dellaripa
+et al. (2014).
 
 
 Links to external sites
