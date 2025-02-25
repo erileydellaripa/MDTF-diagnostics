@@ -52,10 +52,11 @@ and additional functions needed to identify the WWEs and determine
 their characteristics are contained in ``WWE_diag_tools.py``. The main
 driver script reads in the necessary data, prepares the zonal wind
 stress for identifying WWEs, calls the function that identifies the
-WWEs and their characteristics, saves the WWE labels and mask and
-their characteristics (i.e., central time and longitude, zonal extent,
-duration, and integrated wind work (i.e., total forcing of zonal wind
-stress to the ocean)), calls the functions that make the plots.
+WWEs and their characteristics, saves information to netcdf files
+including: the WWE labels and mask and their characteristics (i.e.,
+central time and longitude, zonal extent, duration, and integrated
+wind work (i.e., total forcing of zonal wind stress to the ocean)),
+and finally calls the functions that make the plots.
 
 The observational data used is TropFlux daily zonal surface fluxes
 that are available from 1980-2014 (Praveen Kumar 2014).
