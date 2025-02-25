@@ -31,11 +31,7 @@
       //If False, the model's 2sigma tauu is the threshold
       "do_static_threshold": "True"
     }
-  },
-  "data" : {
-    "realm": "atmos"
-   },
-   
+  },  
 // Variable Coordinates
   "dimensions": {
     "lat": {
@@ -57,12 +53,14 @@
       "frequency" : "day",
       "dimensions": ["time", "lat", "lon"],
       "standard_name" : "surface_downward_eastward_stress",
+      "realm": "atmos",
       "units": "Pa"
     },
     "sftlf": {
      // "frequency": "fx",
       "dimensions": ["lat", "lon"],
       "standard_name": "land_area_fraction",
+      "realm": "land",
       "units": "%"
       }
   }
